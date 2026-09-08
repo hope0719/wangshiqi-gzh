@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一键复制排版内容（绕过浏览器改写）</title>
+</head>
+<body style="margin:0; background:#F9F1EC; font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif; min-height:100vh; display:flex; align-items:center; justify-content:center;">
+  <div style="text-align:center; padding:40px 30px; max-width:420px;">
+    <p style="font-size:15px; color:#B54A33; margin:0 0 8px; font-weight:bold;">王拾柒 · 公众号排版</p>
+    <h1 style="font-size:22px; color:#2E2A27; margin:0 0 24px;">① 点击复制 → ② 去公众号粘贴</h1>
+    <button id="btn" style="background:#B54A33; color:#fff; border:none; border-radius:12px; padding:16px 48px; font-size:17px; font-weight:bold; cursor:pointer; box-shadow:0 4px 14px rgba(181,74,51,0.3);">📋 一键复制排版内容</button>
+    <p id="status" style="font-size:14px; color:#8C8580; margin:20px 0 0; line-height:1.8;">复制的是原始 HTML 源码（text/html 格式），<br>不经过浏览器样式改写，微信检测不会再报<br>「文字对齐异常」。</p>
+  </div>
+  <script>
+    var btn = document.getElementById('btn');
+    var status = document.getElementById('status');
+    btn.addEventListener('click', async function () {
+      btn.disabled = true;
+      btn.textContent = '⏳ 正在处理…';
+      try {
+        var resp = await fetch('./index.html?t=' + Date.now(), { cache: 'no-store' });
+        var html = await resp.text();
+        // 清除预览系统注入的调试属性
+        html = html.replace(/ data-page-node-id="[^"]*"/g, '');
+        // 截取 body 内部作为片段
+        var m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+        var frag = m ? m[1] : html;
+        var plain = frag.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': new Blob([frag], { type: 'text/html' }),
+            'text/plain': new Blob([plain], { type: 'text/plain' })
+          })
+        ]);
+        btn.textContent = '✅ 已复制，去公众号粘贴吧';
+        status.innerHTML = '剪贴板里现在是干净的原始源码。<br>公众号后台新建图文 → Cmd/Ctrl+V 粘贴即可。<br><b style="color:#B54A33;">若粘贴无效，请用 Chrome / Edge 打开本页</b>（需要支持剪贴板 API 的浏览器）。';
+      } catch (e) {
+        btn.textContent = '⚠️ 复制失败，见下方说明';
+        status.innerHTML = '错误：' + e.message + '<br>本功能需要 https + Chrome/Edge 浏览器，<br>并允许页面访问剪贴板。';
+      }
+      btn.disabled = false;
+    });
+  </script>
+</body>
+</html>
